@@ -1,19 +1,14 @@
-const express = require("express")
-const Router = express.Router()
+import express from "express";
 
-const {AddUserData} = require("../Controller/UserRegistration")
- 
+import {
+  AddUserData,
+  Logindata,
+} from "../Controller/UserRegistration.js";
 
+const Router = express.Router();
 
-Router.route("/AddUser").post(AddUserData)
+Router.route("/AddUser").post(AddUserData);
 
+Router.route("/Login").post(Logindata);
 
-
-
-
-
-
-
-
-
-module.exports = Router
+export default Router;

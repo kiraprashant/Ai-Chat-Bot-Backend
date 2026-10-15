@@ -1,25 +1,25 @@
-const mongoose = require("mongoose")
-require('dotenv').config()
+import mongoose from "mongoose";
+import "dotenv/config";
 
-const url = process.env.DB_URL
+const url = process.env.DB_URL;
 
-const connectDB = () =>{
-    console.log("Attempting to connect to the database...")
-    mongoose.connect(url,{
-        //useNewUrlParser: true,
-        //ssl: true,
-        writeConcern: { w: 'majority' },
-    }).then(()=>{
-        console.log("Mongo URI:", url)
-        console.log("Connected to the database successfully." , mongoose.connection.name)
-    }).catch((e)=>{
-        console.error("Error connecting to the database:", e)
-        console.log("Connection failed.")
-    })
-}
+const connectDB = async () => {
+  try {
+    console.log("Attempting to connect to the database...");
 
-// mongodb+srv://prashantnair1999:wlKbBukyFw0Eb638@prashantapi.saxl0go.mongodb.net/ShopingCart
-// "mongodb+srv://prashantnair1999:wlKbBukyFw0Eb638@prashantapi.saxl0go.mongodb.net/ShopingCart?retryWrites=true&w=majority"
+    await mongoose.connect(url, {
+      writeConcern: { w: "majority" },
+    });
 
+    console.log("Mongo URI:", url);
+    console.log(
+      "Connected to the database successfully.",
+      mongoose.connection.name
+    );
+  } catch (e) {
+    console.error("Error connecting to the database:", e);
+    console.log("Connection failed.");
+  }
+};
 
-module.exports = connectDB
+export default connectDB;
