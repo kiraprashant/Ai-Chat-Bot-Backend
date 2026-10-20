@@ -11,6 +11,7 @@ const getOllamaModels = async(req,res) => {
     );
 
     if (!response.ok) {
+      console.log(response.status)
       throw new Error(`HTTP error: ${response.status}`);
     }
 
@@ -34,7 +35,10 @@ const getOllamaModels = async(req,res) => {
 
   } catch (error) {
     console.error("Failed to fetch Ollama models:", error.message);
-    return [];
+    return res.status(503).json({
+      success: false,
+      msg: "Unable to connect to Ollama. Please check whether Ollama is running.",
+    });
   }
 }
 
@@ -47,8 +51,6 @@ const model = new ChatOllama({
 });
 
 const GenAI = async(req,res) => {
-
-  getOllamaModels();
 
   try {
     console.log("working")
