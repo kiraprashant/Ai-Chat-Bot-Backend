@@ -1,6 +1,66 @@
 
 import { ChatOllama } from "@langchain/ollama";
 import UserModel from "../../Models/UserModel.js";
+import { tool } from "@langchain/core/tools";
+import {
+  SystemMessage,
+  HumanMessage,
+  AIMessage,
+  ToolMessage,
+} from "@langchain/core/messages";
+import { z } from "zod";
+import "dotenv/config";
+
+
+const model = new ChatOllama({
+  model: "gemma4:31b-cloud",
+  temperature: 0.7,
+});
+
+
+const searchWeb = tool(
+  async ({ query }) => {
+    const response = await fetch(
+      "https://api.tavily.com/search",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+        },
+        body: JSON.stringify({
+          query,
+          max_results: 5,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Tavily error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return JSON.stringify(
+      data.results.map((item) => ({
+        title: item.title,
+        url: item.url,
+        content: item.content,
+      }))
+    );
+  },
+  {
+    name: "search_web",
+    description:
+      "Search the internet when the user explicitly asks to use the internet or net needs current information.",
+    schema: z.object({
+      query: z.string(),
+    }),
+  }
+);
+
+const modelWithTools = model.bindTools([searchWeb]);
+
 
  
 
@@ -44,41 +104,125 @@ const getOllamaModels = async(req,res) => {
 
 
 
-
-const model = new ChatOllama({
-  model: "gemma4:31b-cloud",
-  temperature: 0.7,
-});
-
-const GenAI = async(req,res) => {
-
+const GenAI = async (req, res) => {
   try {
-    console.log("working")
-    const response = await model.invoke([
-      {
-        role: "system",
-        content: "You are a helpful AI assistant also help me in Explain concepts simply and provide code examples.",
-      },
-      {
-        role: "user",
-        content: "Tell me about Server and client programing which top 3 best tech",
-      },
-    ]);
-  
-    // console.log(response.usage_metadata);
-    // console.log(response.content);
+    // const { question } = req.body;
 
-    res.json({
-      msg: "Login successful",
-      content: response.content,
-      usage:response.usage_metadata
+    // if (typeof question !== "string" || !question.trim()) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     msg: "Please provide a question",
+    //   });
+    // }
+
+    const { messages: chatHistory } = req.body;
+
+if (
+  !Array.isArray(chatHistory) ||
+  chatHistory.length === 0 ||
+  !chatHistory.every(
+    (m) =>
+      ["user", "assistant"].includes(m.role) &&
+      typeof m.content === "string" &&
+      m.content.trim()
+  )
+) {
+  return res.status(400).json({
+    success: false,
+    msg: "Please provide valid conversation messages",
+  });
+}
+
+    const messages = [
+      new SystemMessage(`
+        You are a helpful AI assistant.
+        Explain concepts simply and provide code examples.
+
+        You have access to a search_web tool.
+
+        If the user explicitly asks to use the internet,
+        you MUST use search_web before answering.
+
+        For questions about current information, use search_web.
+        For ordinary questions, answer from your existing knowledge
+        when web research is unnecessary.
+      `),
+     
+  ...chatHistory.map((message) =>
+    message.role === "user"
+      ? new HumanMessage(message.content)
+      : new AIMessage(message.content)
+  ),
+    ];
+
+    let searchedWeb = false;
+    let totalTokens = 0;
+
+    // Allow up to 5 model/tool iterations
+    for (let i = 0; i < 5; i++) {
+      const response = await modelWithTools.invoke(messages);
+
+      messages.push(response);
+
+      totalTokens +=
+        response.usage_metadata?.total_tokens ?? 0;
+
+        console.log("response.tool_calls?.length " , response.tool_calls?.length)
+
+      // If no tool is requested, return the final answer
+      if (!response.tool_calls?.length) {
+        return res.status(200).json({
+          success: true,
+          content: response.content,
+          searchedWeb,
+          usage: {
+            total_tokens: totalTokens,
+          },
+        });
+      }
+
+      // Execute requested tools
+      for (const call of response.tool_calls) {
+        if (call.name === "search_web") {
+          searchedWeb = true;
+
+          try {
+            const result = await searchWeb.invoke(call.args);
+
+            console.log("result :: ", result)
+
+            messages.push(
+              new ToolMessage({
+                content: result,
+                tool_call_id: call.id,
+              })
+            );
+          } catch (error) {
+            messages.push(
+              new ToolMessage({
+                content: `Search failed: ${error.message}`,
+                tool_call_id: call.id,
+              })
+            );
+          }
+        }
+      }
+    }
+
+    return res.status(502).json({
+      success: false,
+      msg: "Maximum tool-call limit reached",
+    });
+  } catch (error) {
+    console.error("GenAI Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      msg: "Failed to generate an AI response",
     });
   }
-  catch(e){
-    console.log(e)
-  }
+};
 
-}
 
 const UpdateTotalTokens = async (req, res) => {
   try {
