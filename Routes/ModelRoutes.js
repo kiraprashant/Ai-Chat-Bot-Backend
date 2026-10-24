@@ -7,7 +7,7 @@ const Router = express.Router();
 
 Router.route("/chat-bot").post(GenAI);
 
-Router.route("/List-Model").post(getOllamaModels);
+Router.route("/List-Model").get(getOllamaModels);
 
 Router.route("/Model-Usage-update").post(UpdateTotalTokens);
 
