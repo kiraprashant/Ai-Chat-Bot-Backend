@@ -7,12 +7,12 @@ const ChatHistorySchema = new mongoose.Schema({
     index: true,
   },
 
-  name: {
+  Title: {
     type: String,
     required: true,
   },
 
-  email: {
+  Email: {
     type: String,
     required: true,
   },

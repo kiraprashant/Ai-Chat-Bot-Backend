@@ -12,11 +12,6 @@ import { z } from "zod";
 import "dotenv/config";
 
 
-// const model = new ChatOllama({
-//   model: "qwen3.5:2b",
-//   temperature: 0.7,
-// });
-
 
 const searchWeb = tool(
   async ({ query }) => {
@@ -67,7 +62,7 @@ const searchWeb = tool(
 const getOllamaModels = async(req,res) => {
   try {
     const response = await fetch(
-      "http://localhost:11434/api/tags"
+      "https://ollama.com/api/tags"
     );
 
     if (!response.ok) {
@@ -116,9 +111,8 @@ const GenAI = async (req, res) => {
       chatHistory.length === 0 ||
       !chatHistory.every(
         (m) =>
-          ["user", "assistant"].includes(m.role) &&
-          typeof m.content === "string" &&
-          m.content.trim()
+          ["user", "assistant"].includes(m.role) ||  ["user", "assistant"].includes(m.Role) &&
+          typeof m.content === "string" || typeof m.Content === "string" && m.content.trim() || m.Content.trim()
       )
     ) {
       return res.status(400).json({
@@ -127,9 +121,17 @@ const GenAI = async (req, res) => {
       });
     }
 
+    // const model = new ChatOllama({
+    //   model: modelName,
+    //   temperature: 0.7,
+    // });
+
     const model = new ChatOllama({
       model: modelName,
-      temperature: 0.7,
+      baseUrl: "https://ollama.com",
+      headers: {
+        Authorization: `Bearer ${process.env.OLLAMA_API_KEY}`,
+      },
     });
 
     const modelWithTools = model.bindTools([searchWeb]);

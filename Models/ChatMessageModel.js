@@ -2,38 +2,39 @@ import mongoose from "mongoose";
 
 const ChatMessageSchema = new mongoose.Schema({
 
-    ChatId: {
-        type: String,
-        required: true,
-        index: true,
-      },
 
-
-    MessageId: {
+  ChatId: {
     type: String,
     required: true,
     index: true,
   },
 
-  name: {
+  MessageId: {
+    type: String,
+    required: true,
+    index: true,
+  },
+
+  Name: {
+    type: String,
+    required: true,
+  },
+  Role: {
     type: String,
     required: true,
   },
 
-  content: {
+  Content: {
     type: String,
     required: true,
   },
 
-  time: {
+  Time: {
     type: Date,
     default: Date.now,
   },
 });
 
-const ChatMessageModel = mongoose.model(
-  "ChatMessage",
-  ChatMessageSchema
-);
+const ChatMessageModel = mongoose.model("ChatMessage", ChatMessageSchema);
 
 export default ChatMessageModel;

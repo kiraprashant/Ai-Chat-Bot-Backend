@@ -5,6 +5,8 @@ import "dotenv/config";
 import ConnectDB from "../ConnectionDatabase/Connection.js";
 import UserRouter from "../Routes/ChatRoutes.js";
 import ModelRouter from "../Routes/ModelRoutes.js";
+import ChatHistoryRoute from "../Routes/ChatHistoryRoutes.js"
+import MessageRoutes from "../Routes/MessageRoutes.js"
 
 
 const app = express();
@@ -19,6 +21,8 @@ app.use(express.json());
 // Routes
 app.use("/api/ChatRoom", UserRouter);
 app.use("/api/ChatModel", ModelRouter);
+app.use("/api/ChatHistory", ChatHistoryRoute);
+app.use("/api/Message", MessageRoutes);
 
 // Basic GET API
 app.get("/", (req, res) => {
