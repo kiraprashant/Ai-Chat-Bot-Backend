@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 
 const ChatHistorySchema = new mongoose.Schema({
-  ChatId: {
-    type: String,
+  UserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
     index: true,
   },
@@ -10,11 +11,7 @@ const ChatHistorySchema = new mongoose.Schema({
   Title: {
     type: String,
     required: true,
-  },
-
-  Email: {
-    type: String,
-    required: true,
+    trim: true,
   },
 
   Created_At: {
@@ -23,6 +20,9 @@ const ChatHistorySchema = new mongoose.Schema({
   },
 });
 
-const ChatHistoryModel = mongoose.model("ChatHistory", ChatHistorySchema);
+const ChatHistoryModel = mongoose.model(
+  "ChatHistory",
+  ChatHistorySchema
+);
 
 export default ChatHistoryModel;

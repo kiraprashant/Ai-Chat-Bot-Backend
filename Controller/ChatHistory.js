@@ -38,15 +38,9 @@ export const AddChatHistory = async (req, res) => {
 // Get all chats for a user
 export const GetChatHistory = async (req, res) => {
   try {
-    const { Email } = req.body;
+    const Email = req.user.Email;
 
-
-    if (!Email) {
-        return res.status(400).json({
-          success: false,
-          msg: "Email is required",
-        });
-      }
+    console.log("Email :",Email)
 
     const chatHistory = await ChatHistoryModel.find({ Email })
       .sort({ Created_At: -1 })
@@ -56,6 +50,7 @@ export const GetChatHistory = async (req, res) => {
       success: true,
       data: chatHistory,
     });
+
   } catch (error) {
     console.error("GetChatHistory error:", error);
 

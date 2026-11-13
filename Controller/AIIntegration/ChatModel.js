@@ -1,4 +1,3 @@
-
 import { ChatOllama } from "@langchain/ollama";
 import UserModel from "../../Models/UserModel.js";
 import { tool } from "@langchain/core/tools";
@@ -11,24 +10,19 @@ import {
 import { z } from "zod";
 import "dotenv/config";
 
-
-
 const searchWeb = tool(
   async ({ query }) => {
-    const response = await fetch(
-      "https://api.tavily.com/search",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
-        },
-        body: JSON.stringify({
-          query,
-          max_results: 5,
-        }),
-      }
-    );
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query,
+        max_results: 5,
+      }),
+    });
 
     if (!response.ok) {
       throw new Error(`Tavily error: ${response.status}`);
@@ -54,19 +48,12 @@ const searchWeb = tool(
   }
 );
 
-
-
-
- 
-
-const getOllamaModels = async(req,res) => {
+const getOllamaModels = async (req, res) => {
   try {
-    const response = await fetch(
-      "https://ollama.com/api/tags"
-    );
+    const response = await fetch("https://ollama.com/api/tags");
 
     if (!response.ok) {
-      console.log(response.status)
+      console.log(response.status);
       throw new Error(`HTTP error: ${response.status}`);
     }
 
@@ -83,11 +70,9 @@ const getOllamaModels = async(req,res) => {
     console.log(models);
 
     res.json({
-      msg:"success",
-      Models:models
-    })
-
-
+      msg: "success",
+      Models: models,
+    });
   } catch (error) {
     console.error("Failed to fetch Ollama models:", error.message);
     return res.status(503).json({
@@ -95,29 +80,42 @@ const getOllamaModels = async(req,res) => {
       msg: "Unable to connect to Ollama. Please check whether Ollama is running.",
     });
   }
-}
-
-
+};
 
 const GenAI = async (req, res) => {
   try {
     const {
       messages: chatHistory,
       model: modelName = "qwen3.5:2b",
+      Email,
+      Token,
     } = req.body;
+
+    console.log("Email: ", Email);
+    console.log("Token: ", Token);
 
     if (
       !Array.isArray(chatHistory) ||
       chatHistory.length === 0 ||
       !chatHistory.every(
         (m) =>
-          ["user", "assistant"].includes(m.role) ||  ["user", "assistant"].includes(m.Role) &&
-          typeof m.content === "string" || typeof m.Content === "string" && m.content.trim() || m.Content.trim()
+          ["user", "assistant"].includes(m.role) ||
+          (["user", "assistant"].includes(m.Role) &&
+            typeof m.content === "string") ||
+          (typeof m.Content === "string" && m.content.trim()) ||
+          m.Content.trim()
       )
     ) {
       return res.status(400).json({
         success: false,
         msg: "Please provide valid conversation messages",
+      });
+    }
+
+    if (!Email || !Number.isSafeInteger(Token) || Token <= 0) {
+      return res.status(400).json({
+        Success: false,
+        msg: "Valid Email and positive token count are required",
       });
     }
 
@@ -183,14 +181,9 @@ const GenAI = async (req, res) => {
       for await (const chunk of await modelWithTools.stream(messages)) {
         if (disconnected) return;
 
-        fullResponse = fullResponse
-          ? fullResponse.concat(chunk)
-          : chunk;
+        fullResponse = fullResponse ? fullResponse.concat(chunk) : chunk;
 
-        const text =
-          typeof chunk.content === "string"
-            ? chunk.content
-            : "";
+        const text = typeof chunk.content === "string" ? chunk.content : "";
 
         if (text) {
           streamedText += text;
@@ -206,10 +199,42 @@ const GenAI = async (req, res) => {
         throw new Error("The model returned an empty response");
       }
 
-      totalTokens +=
-        fullResponse.usage_metadata?.total_tokens ?? 0;
+      totalTokens += fullResponse.usage_metadata?.total_tokens ?? 0;
 
       messages.push(fullResponse);
+
+      // ai complete update token
+
+      const existingUser = await UserModel.findOne({
+        Email: "kira1999@gmail.com",
+      });
+
+      const users = await UserModel.find({}).select("Email");
+
+      console.log("Sample users:", users);
+
+      console.log("Existing user:", existingUser);
+
+      const UpdatedUser = await UserModel.findOneAndUpdate(
+        { Email:"prashantnair19999@gmail.com"},
+        {
+          $inc: { totalTokens: totalTokens },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      ).select("FullName Email totalTokens");
+
+      // Check user exists
+      if (!UpdatedUser) {
+        sendEvent({
+          type: "error",
+          message: "User not found",
+        });
+
+        return res.end();
+      }
 
       // No tool calls: the answer is complete
       if (!fullResponse.tool_calls?.length) {
@@ -218,6 +243,7 @@ const GenAI = async (req, res) => {
           success: true,
           AIModel: modelName,
           searchedWeb,
+          UpdatedUser,
           usage: {
             total_tokens: totalTokens,
           },
@@ -287,17 +313,12 @@ const GenAI = async (req, res) => {
   }
 };
 
-
 const UpdateTotalTokens = async (req, res) => {
   try {
     const { Email, tokens } = req.body;
 
     // Validate input
-    if (
-      !Email ||
-      !Number.isSafeInteger(tokens) ||
-      tokens <= 0
-    ) {
+    if (!Email || !Number.isSafeInteger(tokens) || tokens <= 0) {
       return res.status(400).json({
         Success: false,
         msg: "Valid Email and positive token count are required",
@@ -342,4 +363,4 @@ const UpdateTotalTokens = async (req, res) => {
 export default UpdateTotalTokens;
 
 // GenAI().catch(console.error);
-export { GenAI , getOllamaModels , UpdateTotalTokens};
+export { GenAI, getOllamaModels, UpdateTotalTokens };

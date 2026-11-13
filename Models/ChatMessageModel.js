@@ -2,9 +2,16 @@ import mongoose from "mongoose";
 
 const ChatMessageSchema = new mongoose.Schema({
 
+  UserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  },
 
   ChatId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "ChatHistory",
     required: true,
     index: true,
   },
@@ -19,8 +26,10 @@ const ChatMessageSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+
   Role: {
     type: String,
+    enum: ["user", "assistant"],
     required: true,
   },
 
@@ -29,10 +38,16 @@ const ChatMessageSchema = new mongoose.Schema({
     required: true,
   },
 
+  Model: {
+    type: String,
+    default: null,
+  },
+
   Time: {
     type: Date,
     default: Date.now,
   },
+
 });
 
 const ChatMessageModel = mongoose.model("ChatMessage", ChatMessageSchema);
